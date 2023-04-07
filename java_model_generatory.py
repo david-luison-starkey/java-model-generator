@@ -5,7 +5,7 @@ import argparse
 import pathlib
 import os
 
-HIBERNATE_JAVA_TYPES = {
+JAVA_TYPES = {
     'INT': { 'type': 'Integer', 'class': 'java.lang.Integer;' },
     'INTEGER': { 'type': 'Integer', 'class': 'java.lang.Integer;' },
     'BIGINT': { 'type': 'Long', 'class': 'java.lang.Long;' },
@@ -112,11 +112,11 @@ def parse_args() -> argparse.Namespace:
 
 
 def get_java_type_for_type(sql_data_type: str) -> str:
-    return HIBERNATE_JAVA_TYPES.get(sql_data_type.upper()).get('type')
+    return JAVA_TYPES.get(sql_data_type.upper()).get('type')
 
 
 def get_java_class_for_type(sql_data_type: str) -> str:
-    return HIBERNATE_JAVA_TYPES.get(sql_data_type.upper()).get('class')
+    return JAVA_TYPES.get(sql_data_type.upper()).get('class')
 
 
 def get_db_connection_from_args(driver: str, server: str, database: str, username: str = '', password: str = '') -> pyodbc.Connection:
@@ -164,7 +164,7 @@ def create_output_directory(directory: str) -> None:
         os.makedirs(directory)
 
 def write_class_to_file(table: str, columns_types: List[Tuple], package: str, indent: str, directory: str) -> None:
-    type_imports = {get_java_class_for_type(java_type[1]) for java_type in columns_types } 
+    type_imports = { get_java_class_for_type(java_type[1]) for java_type in columns_types } 
     create_output_directory(directory)
     with open(os.path.join(f'{directory}', f'{table}.java'), 'w') as file:
         file.write(f'package {package};\n') 
