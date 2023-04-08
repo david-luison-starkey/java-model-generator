@@ -75,7 +75,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         '-d',
         '--driver',
-        help='Driver for target SQL server'
+        help='Driver for target SQL server. Use instead of -c, --connection_string flag'
     )
     parser.add_argument(
         '-s',
