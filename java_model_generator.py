@@ -32,8 +32,15 @@ JAVA_TYPES = {
     'IMAGE': {'type': 'Byte[]', 'class': 'java.lang.Byte'},
 }
 
-TABLES_QUERY = 'SELECT t.TABLE_NAME FROM INFORMATION_SCHEMA.TABLES AS t'
-COLUMNS_QUERY = f'SELECT c.COLUMN_NAME, c.DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS AS c WHERE c.TABLE_NAME = \'{{}}\''
+
+def get_tables_query(table: str) -> str:
+    query = f'SELECT t.TABLE_NAME FROM INFORMATION_SCHEMA.TABLES AS t WHERE t.TABLE_NAME = \'{table}\'' \
+        if table else 'SELECT t.TABLE_NAME FROM INFORMATION_SCHEMA.TABLES AS t'
+    return query
+
+
+def get_columns_and_types_query(table: str) -> str:
+    return f'SELECT c.COLUMN_NAME, c.DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS AS c WHERE c.TABLE_NAME = \'{table}\''
 
 
 def get_imports_string() -> str:
@@ -47,6 +54,7 @@ import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
 """
 
 
@@ -115,6 +123,12 @@ def parse_args() -> argparse.Namespace:
         default=os.path.join(f'{pathlib.Path(__file__).parent.resolve()}', 'models'),
         help='Directory to output generated .java files'
     )
+    parser.add_argument(
+        '-t',
+        '--table',
+        help='Specify a TABLE_NAME to generate a model class for. Default is to generate a model class for every \
+              table in a database\'s INFORMATION_SCHEMA'
+    )
     return parser.parse_args()
 
 
@@ -147,24 +161,24 @@ def validate_args_usage(arguments: Namespace) -> None:
 
 
 def camel_case(string: str, lower=False) -> str:
-    string = sub(r"(_-)+", " ", string).title().replace(" ", "")
+    string = sub(r"(_|-)+", " ", string).title().replace(" ", "")
     return ''.join([string[0].lower(), string[1:]]) if lower else string
 
 
-def get_db_tables(db_connection: Connection) -> List[Row]:
+def get_db_tables(db_connection: Connection, query: str) -> List[Row]:
     with db_connection.cursor() as cursor:
-        return cursor.execute(TABLES_QUERY).fetchall()
+        return cursor.execute(query).fetchall()
 
 
-def get_columns_and_types(db_connection: Connection, table: str) -> List[Row]:
+def get_db_columns_and_types(db_connection: Connection, query: str) -> List[Row]:
     with db_connection.cursor() as cursor:
-        return cursor.execute(COLUMNS_QUERY.format(table)).fetchall()
+        return cursor.execute(query).fetchall()
 
 
 def add_type_imports(type_classes: Set) -> str:
     imports = '\n'.join(f'import {i}' for i in type_classes)
     if imports:
-        return get_imports_string() + '\n' + imports + '\n'
+        return imports + '\n'
 
 
 def create_output_directory(directory: str) -> None:
@@ -178,6 +192,7 @@ def write_class_to_file(table: str, columns_types: List[Row], package: str, inde
     create_output_directory(directory)
     with open(os.path.join(f'{directory}', f'{table}.java'), 'w') as file:
         file.write(f'package {package};\n')
+        file.write(get_imports_string())
         file.write(add_type_imports(type_imports))
         file.write('\n')
         file.write(get_class_annotations())
@@ -198,11 +213,13 @@ def write_class_to_file(table: str, columns_types: List[Row], package: str, inde
         file.write('}')
 
 
-def build_model_class_loop(db_connection: Connection, package: str, indent: str, directory: str) -> None:
-    tables = get_db_tables(db_connection)
+def build_model_class_loop(db_connection: Connection, package: str, indent: str, directory: str, table: str) -> None:
+    tables_query = get_tables_query(table)
+    tables = get_db_tables(db_connection, tables_query)
     for table in tables:
         table_name = table[0]
-        columns_and_types = get_columns_and_types(db_connection, table_name)
+        columns_and_types_query = get_columns_and_types_query(table_name)
+        columns_and_types = get_db_columns_and_types(db_connection, columns_and_types_query)
         write_class_to_file(table_name, columns_and_types, package, indent, directory)
 
 
@@ -213,4 +230,4 @@ if __name__ == '__main__':
         connection = get_db_connection_from_connection_string(args.connection_string)
     else:
         connection = get_db_connection_from_args(args.driver, args.server, args.database, args.username, args.password)
-    build_model_class_loop(connection, args.package, args.indentation, args.output)
+    build_model_class_loop(connection, args.package, args.indentation, args.output, args.table)
