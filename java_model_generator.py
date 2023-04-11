@@ -190,7 +190,7 @@ def create_output_directory(directory: str) -> None:
 def write_class_to_file(table: str, columns_types: List[Row], package: str, indent: str, directory: str) -> None:
     type_imports = {get_java_class_for_type(java_type[1]) for java_type in columns_types}
     create_output_directory(directory)
-    with open(os.path.join(f'{directory}', f'{table}.java'), 'w') as file:
+    with open(os.path.join(f'{directory}', f'{camel_case(table)}.java'), 'w') as file:
         file.write(f'package {package};\n')
         file.write(get_imports_string())
         file.write(add_type_imports(type_imports))
