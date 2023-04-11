@@ -10,26 +10,26 @@ import pyodbc
 
 
 JAVA_TYPES = {
-    'INT': {'type': 'Integer', 'class': 'java.lang.Integer;'},
-    'INTEGER': {'type': 'Integer', 'class': 'java.lang.Integer;'},
-    'BIGINT': {'type': 'Long', 'class': 'java.lang.Long;'},
-    'SMALLINT': {'type': 'Short', 'class': 'java.lang.Short;'},
-    'REAL': {'type': 'Float', 'class': 'java.lang.Float;'},
-    'FLOAT': {'type': 'Float', 'class': 'java.lang.Float;'},
-    'DOUBLE': {'type': 'Double', 'class': 'java.lang.Double;'},
+    'INT': {'type': 'Integer', 'class': None},
+    'INTEGER': {'type': 'Integer', 'class': None},
+    'BIGINT': {'type': 'Long', 'class': None},
+    'SMALLINT': {'type': 'Short', 'class': None},
+    'REAL': {'type': 'Float', 'class': None},
+    'FLOAT': {'type': 'Float', 'class': None},
+    'DOUBLE': {'type': 'Double', 'class': None},
     'DECIMAL': {'type': 'BigDecimal', 'class': 'java.math.BigDecimal;'},
     'NUMERIC': {'type': 'BigDecimal', 'class': 'java.math.BigDecimal;'},
-    'NCHAR': {'type': 'String', 'class': 'java.lang.String;'},
-    'CHAR': {'type': 'String', 'class': 'java.lang.String;'},
-    'VARCHAR': {'type': 'String', 'class': 'java.lang.String;'},
-    'NVARCHAR': {'type': 'String', 'class': 'java.lang.String;'},
-    'TINYINT': {'type': 'Byte', 'class': 'java.lang.Byte;'},
-    'BIT': {'type': 'Boolean', 'class': 'java.lang.Boolean;'},
+    'NCHAR': {'type': 'String', 'class': None},
+    'CHAR': {'type': 'String', 'class': None},
+    'VARCHAR': {'type': 'String', 'class': None},
+    'NVARCHAR': {'type': 'String', 'class': None},
+    'TINYINT': {'type': 'Byte', 'class': None},
+    'BIT': {'type': 'Boolean', 'class': None},
     'DATE': {'type': 'Date', 'class': 'java.util.Date;'},
     'DATETIME': {'type': 'Date', 'class': 'java.util.Date;'},
-    'BINARY': {'type': 'Byte[]', 'class': 'java.lang.Byte'},
-    'VARBINARY': {'type': 'Byte[]', 'class': 'java.lang.Byte'},
-    'IMAGE': {'type': 'Byte[]', 'class': 'java.lang.Byte'},
+    'BINARY': {'type': 'Byte[]', 'class': None},
+    'VARBINARY': {'type': 'Byte[]', 'class': None},
+    'IMAGE': {'type': 'Byte[]', 'class': None},
 }
 
 
@@ -47,6 +47,7 @@ def get_imports_string() -> str:
     return """\
 
 import jakarta.persistence.Entity;
+import java.io.Serial;
 import java.io.Serializable;
 import jakarta.persistence.Column;
 import jakarta.persistence.Id;
@@ -175,8 +176,8 @@ def get_db_columns_and_types(db_connection: Connection, query: str) -> List[Row]
         return cursor.execute(query).fetchall()
 
 
-def add_type_imports(type_classes: Set) -> str:
-    imports = '\n'.join(f'import {i}' for i in type_classes)
+def get_type_imports_statements(type_classes: Set) -> str:
+    imports = '\n'.join(f'import {i}' for i in type_classes if i)
     if imports:
         return imports + '\n'
 
@@ -193,13 +194,14 @@ def write_class_to_file(table: str, columns_types: List[Row], package: str, inde
     with open(os.path.join(f'{directory}', f'{camel_case(table)}.java'), 'w') as file:
         file.write(f'package {package};\n')
         file.write(get_imports_string())
-        file.write(add_type_imports(type_imports))
+        file.write(get_type_imports_statements(type_imports))
         file.write('\n')
         file.write(get_class_annotations())
         file.write(f'@Table(name = "{table}")\n')
         file.write(f'public class {camel_case(table)} implements Serializable ')
         file.write('{\n')
         file.write('\n')
+        file.write(f'{indent}@Serial\n')
         file.write(f'{indent}private static final long serialVersionUID = 1L;\n')
         file.write('\n')
         file.write(f'{indent}@Id\n')
