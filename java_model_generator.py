@@ -208,7 +208,7 @@ def write_class_to_file(table: str, columns_types: List[Row], package: str, inde
             java_type = get_java_type_for_type(column_type[1])
             file.write(f'{indent}@Column(name = "{column}")\n')
             file.write(f'{indent}private {java_type} ')
-            file.write(f'{camel_case(column_type[0], True)}\n')
+            file.write(f'{camel_case(column_type[0], True)};\n')
             file.write('\n')
         file.write('}')
 
