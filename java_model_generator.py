@@ -51,6 +51,8 @@ import java.io.Serial;
 import java.io.Serializable;
 import jakarta.persistence.Column;
 import jakarta.persistence.Id;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -177,9 +179,8 @@ def get_db_columns_and_types(db_connection: Connection, query: str) -> List[Row]
 
 
 def get_type_imports_statements(type_classes: Set) -> str:
-    imports = '\n'.join(f'import {i}' for i in type_classes if i)
-    if imports:
-        return imports + '\n'
+    imports = '\n'.join(f'import {i}' for i in type_classes if i is not None)
+    return imports + '\n' if imports else ''
 
 
 def create_output_directory(directory: str) -> None:
@@ -205,6 +206,7 @@ def write_class_to_file(table: str, columns_types: List[Row], package: str, inde
         file.write(f'{indent}private static final long serialVersionUID = 1L;\n')
         file.write('\n')
         file.write(f'{indent}@Id\n')
+        file.write(f'{indent}@GeneratedValue(strategy = GenerationType.UUID)\n')
         for column_type in columns_types:
             column = column_type[0]
             java_type = get_java_type_for_type(column_type[1])
