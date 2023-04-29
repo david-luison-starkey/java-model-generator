@@ -8,7 +8,6 @@ import os
 import pathlib
 import pyodbc
 
-
 JAVA_TYPES = {
     'INT': {'type': 'Integer', 'class': None},
     'INTEGER': {'type': 'Integer', 'class': None},
@@ -168,12 +167,7 @@ def camel_case(string: str, lower=False) -> str:
     return ''.join([string[0].lower(), string[1:]]) if lower else string
 
 
-def get_db_tables(db_connection: Connection, query: str) -> List[Row]:
-    with db_connection.cursor() as cursor:
-        return cursor.execute(query).fetchall()
-
-
-def get_db_columns_and_types(db_connection: Connection, query: str) -> List[Row]:
+def execute_query(db_connection: Connection, query: str) -> List[Row]:
     with db_connection.cursor() as cursor:
         return cursor.execute(query).fetchall()
 
@@ -219,11 +213,11 @@ def write_class_to_file(table: str, columns_types: List[Row], package: str, inde
 
 def build_model_class_loop(db_connection: Connection, package: str, indent: str, directory: str, table: str) -> None:
     tables_query = get_tables_query(table)
-    tables = get_db_tables(db_connection, tables_query)
+    tables = execute_query(db_connection, tables_query)
     for table in tables:
         table_name = table[0]
         columns_and_types_query = get_columns_and_types_query(table_name)
-        columns_and_types = get_db_columns_and_types(db_connection, columns_and_types_query)
+        columns_and_types = execute_query(db_connection, columns_and_types_query)
         write_class_to_file(table_name, columns_and_types, package, indent, directory)
 
 
