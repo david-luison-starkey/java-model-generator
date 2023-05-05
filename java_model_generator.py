@@ -8,6 +8,7 @@ import os
 import pathlib
 import pyodbc
 
+
 JAVA_TYPES = {
     'INT': {'type': 'Integer', 'class': None},
     'INTEGER': {'type': 'Integer', 'class': None},
@@ -38,7 +39,7 @@ def get_tables_query(table: str) -> str:
     return query
 
 
-def get_columns_and_types_query(table: str) -> str:
+def get_columns_query(table: str) -> str:
     return f'SELECT c.COLUMN_NAME, c.DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS AS c WHERE c.TABLE_NAME = \'{table}\''
 
 
@@ -134,11 +135,11 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def get_java_type_for_type(sql_data_type: str) -> str:
+def get_java_type_for_sql_type(sql_data_type: str) -> str:
     return JAVA_TYPES.get(sql_data_type.upper()).get('type')
 
 
-def get_java_class_for_type(sql_data_type: str) -> str:
+def get_java_class_for_sql_type(sql_data_type: str) -> str:
     return JAVA_TYPES.get(sql_data_type.upper()).get('class')
 
 
@@ -172,7 +173,7 @@ def execute_query(db_connection: Connection, query: str) -> List[Row]:
         return cursor.execute(query).fetchall()
 
 
-def get_type_imports_statements(type_classes: Set) -> str:
+def get_type_imports(type_classes: Set) -> str:
     imports = '\n'.join(f'import {i}' for i in type_classes if i is not None)
     return imports + '\n' if imports else ''
 
@@ -183,13 +184,13 @@ def create_output_directory(directory: str) -> None:
         os.makedirs(directory)
 
 
-def write_class_to_file(table: str, columns_types: List[Row], package: str, indent: str, directory: str) -> None:
-    type_imports = {get_java_class_for_type(java_type[1]) for java_type in columns_types}
+def write_class_to_file(table: str, columns: List[Row], package: str, indent: str, directory: str) -> None:
+    type_imports = {get_java_class_for_sql_type(java_type[1]) for java_type in columns}
     create_output_directory(directory)
     with open(os.path.join(f'{directory}', f'{camel_case(table)}.java'), 'w') as file:
         file.write(f'package {package};\n')
         file.write(get_imports_string())
-        file.write(get_type_imports_statements(type_imports))
+        file.write(get_type_imports(type_imports))
         file.write('\n')
         file.write(get_class_annotations())
         file.write(f'@Table(name = "{table}")\n')
@@ -201,9 +202,9 @@ def write_class_to_file(table: str, columns_types: List[Row], package: str, inde
         file.write('\n')
         file.write(f'{indent}@Id\n')
         file.write(f'{indent}@GeneratedValue(strategy = GenerationType.UUID)\n')
-        for column_type in columns_types:
+        for column_type in columns:
             column = column_type[0]
-            java_type = get_java_type_for_type(column_type[1])
+            java_type = get_java_type_for_sql_type(column_type[1])
             file.write(f'{indent}@Column(name = "{column}")\n')
             file.write(f'{indent}private {java_type} ')
             file.write(f'{camel_case(column_type[0], True)};\n')
@@ -216,7 +217,7 @@ def build_model_class_loop(db_connection: Connection, package: str, indent: str,
     tables = execute_query(db_connection, tables_query)
     for table in tables:
         table_name = table[0]
-        columns_and_types_query = get_columns_and_types_query(table_name)
+        columns_and_types_query = get_columns_query(table_name)
         columns_and_types = execute_query(db_connection, columns_and_types_query)
         write_class_to_file(table_name, columns_and_types, package, indent, directory)
 
