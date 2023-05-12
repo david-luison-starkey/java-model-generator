@@ -43,6 +43,14 @@ def get_columns_query(table: str) -> str:
     return f'SELECT c.COLUMN_NAME, c.DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS AS c WHERE c.TABLE_NAME = \'{table}\''
 
 
+def get_column_name(column: Row) -> str:
+    return column[0]
+
+
+def get_column_type(column: Row) -> str:
+    return column[1]
+
+
 def get_imports_string() -> str:
     return """\
 
@@ -202,12 +210,12 @@ def write_class_to_file(table: str, columns: List[Row], package: str, indent: st
         file.write('\n')
         file.write(f'{indent}@Id\n')
         file.write(f'{indent}@GeneratedValue(strategy = GenerationType.UUID)\n')
-        for column_type in columns:
-            column = column_type[0]
-            java_type = get_java_type_for_sql_type(column_type[1])
-            file.write(f'{indent}@Column(name = "{column}")\n')
+        for column in columns:
+            column_name = get_column_name(column)
+            java_type = get_java_type_for_sql_type(get_column_type(column))
+            file.write(f'{indent}@Column(name = "{column_name}")\n')
             file.write(f'{indent}private {java_type} ')
-            file.write(f'{camel_case(column_type[0], True)};\n')
+            file.write(f'{camel_case(column_name, True)};\n')
             file.write('\n')
         file.write('}')
 
