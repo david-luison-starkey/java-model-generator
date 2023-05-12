@@ -64,8 +64,6 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.lang.String;
-import java.lang.Integer;
 import java.util.Date;
 
 @Data
